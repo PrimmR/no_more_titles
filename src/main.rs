@@ -2,6 +2,7 @@ use std::io;
 use image::{ImageBuffer, RgbImage, Rgb};
 use imageproc::drawing::{draw_text_mut, text_size};
 use rusttype::{Font, Scale};
+use itertools::Itertools;
 
 const HEIGHT: i32 = 1080;
 const WIDTH: i32 = HEIGHT * 16/9;
@@ -12,6 +13,9 @@ const CAPTION_SIZE: f32 =  10.8;
 const SPACING_FROM_MID: f32 = 10.8;
 const MARGIN: f32 = 0.8;
 const LINE_BREAK: f32 = 0.0125;
+const MAX_LINES: i32 = 4;
+
+const WIDE_TEXT: bool = true;
 
 fn center(constraint: i32, size: i32) -> i32 {
     (constraint - size) / 2
@@ -44,28 +48,49 @@ fn draw_text(img: &mut RgbImage, font: &Font<'_>, text: Vec<String>) {
     }
 }
 
+// Divides and floors floats to integers, floors integers down by 1
+fn div_floor(num: i32, den: i32) -> i32 {
+    if num % den == 0 {
+        (num / den) - 1
+    } else {
+        num / den
+    }
+}
+
 // Auto line wrap
 fn split_text(text: String, font: &Font<'_>) -> Result<Vec<String>, String> {
+    const LIMIT: i32 = (WIDTH as f32 * MARGIN) as i32;
+
+    if text == "" {
+        return Err(String::from("Please input text"));
+    }
+
+    let (text, split) = if WIDE_TEXT {
+        (text.chars().join(" "), "  ")
+    } else {
+        (text, " ")
+    };
+
     let factor = HEIGHT as f32 / CAPTION_SIZE;
     let scale = Scale{x: factor, y: factor};
     let size = text_size(scale, font, &text);
 
-    let num_lines = (size.0 / (WIDTH as f32 * MARGIN) as i32) + 1;
+    let num_lines = size.0 / LIMIT + 1;
 
-    // if center(HEIGHT, size.1) + (HEIGHT as f32 / SPACING_FROM_MID) as i32 + (size.1 + (HEIGHT as f32 * LINE_BREAK) as i32) * (num_lines+1) > HEIGHT {
-    if num_lines > 4 {
+    if num_lines > MAX_LINES {
         return Err(String::from("Input too long"));
     }
 
     let target = size.0 / num_lines;
-    let words: Vec<_> = text.split(" ").collect();
+    let words: Vec<_> = text.split(split).collect();
 
     let mut lines = vec![String::from(""); num_lines as usize];
     for i in 0..words.len() {
-        if text_size(scale, font, words[i]).0 > WIDTH {
+        if text_size(scale, font, words[i]).0 > LIMIT {
             return Err(String::from("Your input contains a word that is too long"));
         }
-        let line = text_size(scale, font, words[..i].join(" ").as_str()).0 / target;
+        let acc_width = text_size(scale, font, words[..i+1].join(" ").as_str()).0;
+        let line = div_floor(acc_width, target);
         lines[line as usize] += &format!("{} ", words[i]);
     }
 
@@ -85,9 +110,9 @@ fn main() {
     let text;
     loop {
         println!("Category:");
-        // let input = String::from("Shorties");
-        // let input = String::from("This is a very long string nooo its run over");
-        // let input = String::from("This is a very long string and now it's even longer and now it's even longer");
+        // let cat = String::from("Shorties");
+        // let cat = String::from("This is a very long string nooo its run over");
+        // let cat = String::from("This is a very long string and now it's even longer and now it's even longer");
 
         let mut cat = String::new();
         io::stdin().read_line(&mut cat).expect("failed to readline");

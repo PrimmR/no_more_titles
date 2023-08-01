@@ -18,10 +18,12 @@ const WIDE_TEXT: bool = true;
 
 const OUTPUT_FILE: &str = "output.png";
 
+// Puts text in centre of axis
 fn center(constraint: i32, size: i32) -> i32 {
     (constraint - size) / 2
 }
 
+// Draws 'NO MORE' title
 fn draw_title(img: &mut RgbImage, font: &Font<'_>) {
     let text = "N O  M O R E";
     let factor = HEIGHT as f32 * TITLE_SIZE;
@@ -34,6 +36,7 @@ fn draw_title(img: &mut RgbImage, font: &Font<'_>) {
     draw_text_mut(img, Rgb([255, 255, 255]), x, y, scale, font, text);
 }
 
+// Draws user inputted category
 fn draw_text(img: &mut RgbImage, font: &Font<'_>, text: Vec<String>) {
     let mut i = 0;
     for line in &text {
@@ -49,7 +52,7 @@ fn draw_text(img: &mut RgbImage, font: &Font<'_>, text: Vec<String>) {
     }
 }
 
-// Auto line wrap
+// Splits input into lines
 fn split_text(text: String, font: &Font<'_>) -> Result<Vec<String>, String> {
     const LIMIT: i32 = (WIDTH as f32 * MARGIN) as i32;
 
@@ -65,32 +68,24 @@ fn split_text(text: String, font: &Font<'_>) -> Result<Vec<String>, String> {
 
     let factor = HEIGHT as f32 * CAPTION_SIZE;
     let scale = Scale{x: factor, y: factor};
-    let size = text_size(scale, font, &text);
 
-    let num_lines = size.0 / LIMIT + 1;
-
-    if num_lines > MAX_LINES {
-        return Err(String::from("Input too long"));
-    }
-
-    let target = size.0 / num_lines;
+    let mut line = 0;
+    let mut lines = vec![String::from(""); 4];
     let words: Vec<_> = text.split(split).collect();
+    for word_index in 0..words.len() {
+        let word_width = text_size(scale, font, words[word_index]).0;
+        let acc_width = text_size(scale, font, words[..word_index+1].join(" ").as_str()).0;
 
-    let mut lines = vec![String::from(""); num_lines as usize];
-    for i in 0..words.len() {
-        let word_width = text_size(scale, font, words[i]).0;
-        let acc_width = text_size(scale, font, words[..i+1].join(" ").as_str()).0;
-
+        if acc_width > LIMIT * (line + 1) { // If the next word would go over the margin, put it on the next line
+            line += 1;
+        }
         if word_width > LIMIT {
             return Err(String::from("Your input contains a word that is too long"));
         }
-        let line = if word_width < target {
-            acc_width / target
+        if line >= MAX_LINES {
+            return Err(String::from("Input too long"));
         }
-        else {
-            acc_width / LIMIT
-        };
-        lines[line as usize] += &format!("{} ", words[i]);
+        lines[line as usize] += &format!("{} ", words[word_index]);
     }
 
     Ok(lines)

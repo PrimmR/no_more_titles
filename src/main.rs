@@ -16,7 +16,7 @@ const LINE_BREAK: f32 = 0.04;
 const MAX_LINES: i32 = 4;
 const WIDE_TEXT: bool = true;
 
-const OUTPUT_FILE: &str = "output.png";
+const OUTPUT_FILE: &str = "No More.png";
 
 // Puts text in centre of axis
 fn center(constraint: i32, size: i32) -> i32 {
@@ -121,5 +121,5 @@ fn main() {
     draw_text(&mut img, &font, text);
 
     img.save(OUTPUT_FILE).unwrap();
-    println!("Written to output.png")
+    println!("Written to {}", OUTPUT_FILE)
 }
